@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My channel stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap">
+<style>
+:root{
+  --bg:#f1f4f6; --surface:#ffffff; --ink:#10202b; --muted:#5b6b77; --line:#d9e0e5; --accent:#e5322d;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0e171d; --surface:#15222b; --ink:#eef3f6; --muted:#93a4b0; --line:#25353f; --accent:#ff5a54; color-scheme:dark;}
+}
+:root[data-theme="dark"]{--bg:#0e171d; --surface:#15222b; --ink:#eef3f6; --muted:#93a4b0; --line:#25353f; --accent:#ff5a54; color-scheme:dark;}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;
+  display:flex;align-items:center;justify-content:center;padding:24px}
+main{width:100%;max-width:640px}
+.who{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--accent);flex:none}
+.who h1{font-size:1.1rem;font-weight:600;margin:0}
+.who span{color:var(--muted);font-size:.95rem}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:32px 28px}
+.label{color:var(--muted);font-size:1rem;margin:0 0 8px}
+.odo{display:flex;align-items:flex-end;font-weight:800;line-height:1;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;overflow-x:auto;scrollbar-width:none}
+.odo::-webkit-scrollbar{display:none}
+.hero .odo{font-size:clamp(3.2rem,15vw,6.5rem)}
+.digit{display:inline-block;height:1em;overflow:hidden;position:relative}
+.strip{display:flex;flex-direction:column;transition:transform 2.2s cubic-bezier(.16,1,.3,1)}
+.strip span{height:1em;line-height:1em;text-align:center;display:block}
+.sep{display:inline-block;height:1em;line-height:1em;color:var(--muted);padding:0 .02em}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.stat .odo{font-size:clamp(1.6rem,7vw,2.4rem)}
+.foot{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:20px}
+.foot small{color:var(--muted)}
+a.btn{background:var(--accent);color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px}
+a.btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.err{color:var(--accent);font-size:.95rem;margin:12px 0 0}
+@media (prefers-reduced-motion: reduce){.strip{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="who"><div class="dot" aria-hidden="true"></div><div><h1 id="name"></h1><span id="handle"></span></div></div>
+  <section class="hero" aria-live="polite">
+    <p class="label">Subscribers</p>
+    <div class="odo" id="subs" role="img"></div>
+  </section>
+  <div class="row">
+    <div class="stat"><p class="label">Total views</p><div class="odo" id="views" role="img"></div></div>
+    <div class="stat"><p class="label">Videos</p><div class="odo" id="videos" role="img"></div></div>
+  </div>
+  <p class="err" id="err" hidden></p>
+  <div class="foot">
+    <small id="updated">Loading…</small>
+    <a class="btn" id="cta" href="#" target="_blank" rel="noopener">Subscribe on YouTube</a>
+  </div>
+</main>
+<script>
+// ✏️ Fill in these two values. That's all you need.
+const CONFIG = {
+  apiKey: "PASTE_YOUR_YOUTUBE_API_KEY_HERE",
+  handle: "@yourhandle",
+  refreshSeconds: 120
+};
+
+const $ = id => document.getElementById(id);
+
+function show(el, n){
+  const text = n.toLocaleString("en-US");
+  el.setAttribute("aria-label", text);
+  const same = el.dataset.fmt && el.dataset.fmt.length === text.length;
+  if (!same){
+    el.innerHTML = "";
+    for (const ch of text){
+      if (ch >= "0" && ch <= "9"){
+        const d = document.createElement("span"); d.className = "digit"; d.setAttribute("aria-hidden","true");
+        const s = document.createElement("div"); s.className = "strip";
+        for (let i = 0; i < 10; i++){ const c = document.createElement("span"); c.textContent = i; s.appendChild(c); }
+        d.appendChild(s); el.appendChild(d);
+      } else {
+        const p = document.createElement("span"); p.className = "sep"; p.textContent = ch; p.setAttribute("aria-hidden","true"); el.appendChild(p);
+      }
+    }
+  }
+  el.dataset.fmt = text;
+  const strips = el.querySelectorAll(".strip");
+  const digits = text.replace(/\D/g, "");
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    strips.forEach((s, i) => { s.style.transitionDelay = (i * 60) + "ms"; s.style.transform = "translateY(" + (-digits[i]) + "em)"; });
+  }));
+}
+
+async function load(){
+  const err = $("err");
+  try {
+    const url = "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=" +
+      encodeURIComponent(CONFIG.handle) + "&key=" + encodeURIComponent(CONFIG.apiKey);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || "YouTube API error");
+    const ch = data.items && data.items[0];
+    if (!ch) throw new Error("No channel found for " + CONFIG.handle + ". Check the handle.");
+    $("name").textContent = ch.snippet.title;
+    $("handle").textContent = CONFIG.handle;
+    $("cta").href = "https://www.youtube.com/" + CONFIG.handle.replace(/^@?/, "@");
+    const st = ch.statistics;
+    if (st.hiddenSubscriberCount) { $("subs").textContent = "Hidden"; }
+    else show($("subs"), +st.subscriberCount);
+    show($("views"), +st.viewCount);
+    show($("videos"), +st.videoCount);
+    $("updated").textContent = "Updated " + new Date().toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+    err.hidden = true;
+  } catch (e) {
+    err.textContent = "Couldn’t load stats: " + e.message;
+    err.hidden = false;
+    $("updated").textContent = "";
+  }
+}
+
+load();
+setInterval(load, Math.max(30, CONFIG.refreshSeconds) * 1000);
+</script>
+</body>
+</html>
